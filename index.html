@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ODB Food Locations Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        #map { height: 100vh; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // Initialize map centered on ODB
+        var map = L.map('map').setView([39.4512563, -75.7172614], 11);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Locations with coordinates and category
+        var locations = [
+            ["ODB", 39.4512563, -75.7172614, "food"],
+            ["Neighborhood House", 39.459771, -75.719955, "food"],
+            ["Bethesda United Methodist Church", 39.4493932, -75.7141379, "church"],
+            ["Amazing Grace Outreach Ministries/Fresh Rescue Warehouse", 39.4708779, -75.7208587, "food"],
+            ["Food Bank of Delaware", 39.613548, -75.754448, "food"],
+            ["Connections Church", 39.4708779, -75.7208587, "church"],
+            ["Dale United Methodist Church", 39.4526883, -75.714553, "church"],
+            ["MOT Jean Birch Senior Center", 39.446065, -75.719831, "food"],
+            ["Blackbird Community Center", 39.3698783, -75.6612157, "food"],
+            ["St Anne's Episcopal Church", 39.4486817, -75.7160795, "church"],
+            ["Trinity AME Church", 39.4526918, -75.7187256, "church"],
+            ["Friendship House MOT Empowerment Center", 39.449337, -75.718381, "food"],
+            ["Meals on Wheels Delaware", 39.745733, -75.548835, "food"],
+            ["Asbury United Methodist Church", 39.30140030296347, -75.60679141893091, "church"],
+            ["Appoquinimink School District", 39.45308417567841, -75.66406658691454, "school"],
+            ["Smyrna-Clayton Ministerium", 39.298637, -75.6095569, "church"],
+            ["St. Paul's United Methodist Church", 39.4556921883267, -75.66002290410852, "church"],
+            ["Delaware Dept of Education", 39.15501378282347, -75.54516973243082, "school"],
+            ["Crossroads Presbyterian", 39.48378264123553, -75.64661575755456, "church"],
+            ["Fresh State Resource Center", 39.3013474, -75.607916, "food"],
+            ["Smyrna School District", 39.3023272, -75.6018857, "school"],
+            ["Appoquinimink State Service Center", 39.4479785, -75.6958512, "school"],
+            ["Smyrna State Service Center", 39.29989291033078, -75.60039593242443, "school"]
+        ];
+
+        // Function to choose marker color by category
+        function getColor(category) {
+            switch(category) {
+                case "food": return "red";
+                case "church": return "blue";
+                case "school": return "green";
+                default: return "gray";
+            }
+        }
+
+        // Add markers
+        locations.forEach(function(loc) {
+            var color = getColor(loc[3]);
+            L.circleMarker([loc[1], loc[2]], {
+                radius: 8,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.7
+            }).addTo(map)
+            .bindPopup("<b>" + loc[0] + "</b><br>Lat: " + loc[1] + "<br>Lon: " + loc[2] + "<br>Category: " + loc[3]);
+        });
+
+        // Add 5, 10, 15 mile circles around ODB (1 mile ≈ 1609 meters)
+        [5, 10, 15].forEach(function(miles) {
+            L.circle([39.4512563, -75.7172614], {
+                radius: miles * 1609,
+                color: 'black',
+                fill: false,
+                weight: 2,
+                opacity: 0.5
+            }).addTo(map);
+        });
+
+    </script>
+</body>
+</html>
