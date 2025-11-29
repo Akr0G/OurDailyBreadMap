@@ -1,92 +1,180 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ODB Food Locations Map</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ODB Food & Resource Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body { margin:0; font-family: Arial, Helvetica, sans-serif; }
+    #map { height:100vh; width:100%; }
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-    <style>
-        #map { height: 100vh; width: 100%; }
-    </style>
+    /* UI boxes */
+    .controls {
+      position: absolute; top: 10px; right: 10px;
+      background: white; padding:10px; border-radius:8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size:14px;
+      z-index: 9999;
+    }
+    .help-box {
+      position: absolute; bottom: 10px; left: 10px;
+      background: white; padding:10px; border-radius:8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size:13px; max-width:240px;
+      z-index: 9999;
+    }
+    .legend {
+      position: absolute; bottom: 10px; right: 10px;
+      background: white; padding:10px; border-radius:8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size:14px;
+      line-height:1.5;
+      z-index: 9999;
+    }
+    .radius-label {
+      background: white; padding:4px 6px; border-radius:4px;
+      border:1px solid #ccc; font-size:12px;
+      z-index: 9999;
+    }
+  </style>
 </head>
 <body>
-    <div id="map"></div>
 
-    <script>
-        // Initialize map centered on ODB
-        var map = L.map('map').setView([39.4512563, -75.7172614], 11);
+<div id="map"></div>
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+<!-- Filters -->
+<div class="controls">
+  <strong>Filters</strong><br>
+  <label><input type="checkbox" checked onclick="toggleCategory('school')"> School / Agencies</label><br>
+  <label><input type="checkbox" checked onclick="toggleCategory('church')"> Church / Religious</label><br>
+  <label><input type="checkbox" checked onclick="toggleCategory('food')"> Food / Nonprofit</label>
+</div>
 
-        // Locations with coordinates and category
-        var locations = [
-            ["ODB", 39.4512563, -75.7172614, "food"],
-            ["Neighborhood House", 39.459771, -75.719955, "food"],
-            ["Bethesda United Methodist Church", 39.4493932, -75.7141379, "church"],
-            ["Amazing Grace Outreach Ministries/Fresh Rescue Warehouse", 39.4708779, -75.7208587, "food"],
-            ["Food Bank of Delaware", 39.613548, -75.754448, "food"],
-            ["Connections Church", 39.4708779, -75.7208587, "church"],
-            ["Dale United Methodist Church", 39.4526883, -75.714553, "church"],
-            ["MOT Jean Birch Senior Center", 39.446065, -75.719831, "food"],
-            ["Blackbird Community Center", 39.3698783, -75.6612157, "food"],
-            ["St Anne's Episcopal Church", 39.4486817, -75.7160795, "church"],
-            ["Trinity AME Church", 39.4526918, -75.7187256, "church"],
-            ["Friendship House MOT Empowerment Center", 39.449337, -75.718381, "food"],
-            ["Meals on Wheels Delaware", 39.745733, -75.548835, "food"],
-            ["Asbury United Methodist Church", 39.30140030296347, -75.60679141893091, "church"],
-            ["Appoquinimink School District", 39.45308417567841, -75.66406658691454, "school"],
-            ["Smyrna-Clayton Ministerium", 39.298637, -75.6095569, "church"],
-            ["St. Paul's United Methodist Church", 39.4556921883267, -75.66002290410852, "church"],
-            ["Delaware Dept of Education", 39.15501378282347, -75.54516973243082, "school"],
-            ["Crossroads Presbyterian", 39.48378264123553, -75.64661575755456, "church"],
-            ["Fresh State Resource Center", 39.3013474, -75.607916, "food"],
-            ["Smyrna School District", 39.3023272, -75.6018857, "school"],
-            ["Appoquinimink State Service Center", 39.4479785, -75.6958512, "school"],
-            ["Smyrna State Service Center", 39.29989291033078, -75.60039593242443, "school"]
-        ];
+<!-- Help box -->
+<div class="help-box">
+  <strong>How to use</strong><br>
+  • Drag to pan ✓<br>
+  • Scroll to zoom ✓<br>
+  • Click pins to view details ✓<br>
+  • Use filters to hide/show categories ✓
+</div>
 
-        // Function to choose marker color by category
-        function getColor(category) {
-            switch(category) {
-                case "food": return "red";
-                case "church": return "blue";
-                case "school": return "green";
-                default: return "gray";
-            }
-        }
+<!-- Legend -->
+<div class="legend" id="legend">
+  <strong>Legend</strong><br>
+  <span style="color:red">●</span> Food / Nonprofit<br>
+  <span style="color:blue">●</span> Church / Religious<br>
+  <span style="color:green">●</span> School / Government / Service Center<br>
+  <hr style="margin:6px 0;">
+  <span style="font-size:12px">Red dashed lines = 5 / 10 / 15 mile radii</span>
+</div>
 
-        // Add markers
-        locations.forEach(function(loc) {
-            var color = getColor(loc[3]);
-            L.circleMarker([loc[1], loc[2]], {
-                radius: 8,
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.7
-            }).addTo(map)
-            .bindPopup("<b>" + loc[0] + "</b><br>Lat: " + loc[1] + "<br>Lon: " + loc[2] + "<br>Category: " + loc[3]);
-        });
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+// === CONFIG ===
+const ODB_COORDS = [39.4512563, -75.7172614]; // center
+const radiiMiles = [5,10,15];
 
-        // Add 5, 10, 15 mile circles around ODB (1 mile ≈ 1609 meters)
-        [5, 10, 15].forEach(function(miles) {
-            L.circle([39.4512563, -75.7172614], {
-                radius: miles * 1609,
-                color: 'black',
-                fill: false,
-                weight: 2,
-                opacity: 0.5
-            }).addTo(map);
-        });
+// previous color scheme requested
+const COLORS = {
+  food: "red",
+  church: "blue",
+  school: "green"
+};
 
-    </script>
+// Full location list (name, lat, lon, category, address)
+const locations = [
+  {name:"Our Daily Bread (ODB)", lat:39.4512563, lon:-75.7172614, category:"food", address:"214 N Broad St, Middletown, DE 19709"},
+  {name:"Neighborhood House", lat:39.459771, lon:-75.719955, category:"food", address:"811 North Broad Street, Suite 219, Middletown, DE 19709"},
+  {name:"Bethesda United Methodist Church", lat:39.4493932, lon:-75.7141379, category:"church", address:"116 East Main Street, Middletown, DE 19709"},
+  {name:"Amazing Grace Outreach Ministries / Fresh Rescue Warehouse", lat:39.4708779, lon:-75.7208587, category:"food", address:"4843 Summit Bridge Road, Middletown, DE 19709"},
+  {name:"Food Bank of Delaware", lat:39.613548, lon:-75.754448, category:"food", address:"222 Lake Drive, Newark, DE 19702"},
+  {name:"Connections Church", lat:39.4708779, lon:-75.7208587, category:"church", address:"4722 Summit Bridge Rd, Middletown, DE 19709"},
+  {name:"Dale United Methodist Church", lat:39.4526883, lon:-75.714553, category:"church", address:"143 E. Lake Street, Middletown, DE 19709"},
+  {name:"MOT Jean Birch Senior Center", lat:39.446065, lon:-75.719831, category:"food", address:"300 S. Scott Street, Middletown, DE 19709"},
+  {name:"Blackbird Community Center", lat:39.3698783, lon:-75.6612157, category:"food", address:"120 Blackbird Forest Road, Townsend, DE 19734"},
+  {name:"St Anne's Episcopal Church", lat:39.4486817, lon:-75.7160795, category:"church", address:"15 East Green St, Middletown, DE 19709"},
+  {name:"Trinity AME Church", lat:39.4526918, lon:-75.7187256, category:"church", address:"27 Lockwood St, Middletown, DE 19709"},
+  {name:"Friendship House MOT Empowerment Center", lat:39.449337, lon:-75.718381, category:"food", address:"44 W. Main St., Middletown, DE 19709"},
+  {name:"Meals on Wheels Delaware", lat:39.745733, lon:-75.548835, category:"food", address:"100 West 10th St, Suite 207, Wilmington, DE 19801"},
+  {name:"Asbury United Methodist Church", lat:39.30140030296347, lon:-75.60679141893091, category:"church", address:"20 W. Main St, Smyrna, DE"},
+  {name:"Appoquinimink School District", lat:39.45308417567841, lon:-75.66406658691454, category:"school", address:"313 South Fifth Street, Odessa, DE 19730"},
+  {name:"Smyrna-Clayton Ministerium", lat:39.298637, lon:-75.6095569, category:"church", address:"22 North Union Street, Smyrna, DE"},
+  {name:"St. Paul's United Methodist Church", lat:39.4556921883267, lon:-75.66002290410852, category:"church", address:"406 Main Street (PO Box 253), Odessa, DE"},
+  {name:"Delaware Dept of Education", lat:39.15501378282347, lon:-75.54516973243082, category:"school", address:"35 Commerce Way, Suite 1, Dover, DE"},
+  {name:"Crossroads Presbyterian", lat:39.48378264123553, lon:-75.64661575755456, category:"church", address:"627 Vance Neck Road, Middletown, DE"},
+  {name:"Fresh State Resource Center", lat:39.3013474, lon:-75.607916, category:"food", address:"20 West Mt. Vernon St., Smyrna, DE"},
+  {name:"Smyrna School District", lat:39.3023272, lon:-75.6018857, category:"school", address:"82 Monrovia Avenue, Smyrna, DE 19977"},
+  {name:"Appoquinimink State Service Center", lat:39.4479785, lon:-75.6958512, category:"school", address:"122 Silver Lake Road, Middletown, DE 19709"},
+  {name:"Smyrna State Service Center", lat:39.29989291033078, lon:-75.60039593242443, category:"school", address:"200 S Dupont Blvd, #101, Smyrna, DE 19977"}
+];
+
+// === initialize map
+const map = L.map('map').setView(ODB_COORDS, 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, attribution:'© OpenStreetMap contributors' }).addTo(map);
+
+// === add radius circles + subtle labels
+radiiMiles.forEach((miles, idx) => {
+  const meters = miles * 1609.34;
+  L.circle(ODB_COORDS, { radius: meters, color: "#ff4444", weight: 1.5, dashArray: "6 6", fillOpacity: 0 }).addTo(map);
+  // place label a bit north of ODB proportional to miles
+  const latOffset = miles * 0.012; // heuristic placement
+  L.marker([ODB_COORDS[0] + latOffset, ODB_COORDS[1]], {
+    icon: L.divIcon({ className: 'radius-label', html: `<b>${miles} mi</b>` , iconSize:[60,20] })
+  }).addTo(map);
+});
+
+// === layer groups by category
+const groups = {
+  school: L.layerGroup().addTo(map),
+  church: L.layerGroup().addTo(map),
+  food: L.layerGroup().addTo(map)
+};
+
+// === add markers with full popups (name, address, category, coords)
+locations.forEach(loc => {
+  const marker = L.circleMarker([loc.lat, loc.lon], {
+    radius: 8,
+    color: "black",
+    weight: 1,
+    fillColor: COLORS[loc.category],
+    fillOpacity: 0.9
+  });
+
+  const popupHtml = `
+    <div style="font-size:14px">
+      <strong>${loc.name}</strong><br/>
+      <em>${loc.category.charAt(0).toUpperCase() + loc.category.slice(1)}</em><br/>
+      ${loc.address}<br/>
+      <small>Lat: ${loc.lat.toFixed(6)}, Lon: ${loc.lon.toFixed(6)}</small>
+    </div>
+  `;
+
+  marker.bindPopup(popupHtml);
+  marker.addTo(groups[loc.category]);
+});
+
+// === filter toggle function (checkboxes call this)
+function toggleCategory(cat) {
+  if (map.hasLayer(groups[cat])) map.removeLayer(groups[cat]);
+  else map.addLayer(groups[cat]);
+}
+
+// ensure initial layers visible
+Object.values(groups).forEach(g => map.addLayer(g));
+
+// === keyboard accessibility: allow Enter on filter checkboxes (tiny nicety)
+document.addEventListener('keydown', (e) => {
+  if (e.key === "?" ) {
+    alert("Map tips: Drag to move • Scroll to zoom • Click markers for details • Use filters to toggle categories");
+  }
+});
+
+// optional: fit bounds to show everything nicely
+const allLatLng = locations.map(l => [l.lat, l.lon]);
+if (allLatLng.length) {
+  const bounds = L.latLngBounds(allLatLng);
+  bounds.extend(ODB_COORDS);
+  map.fitBounds(bounds.pad(0.2));
+}
+</script>
 </body>
 </html>
